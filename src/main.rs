@@ -1,11 +1,10 @@
 use std::{cell::RefCell, io, rc::Rc, time::Duration};
 
 use ratatui::{
-    layout::{Alignment, Offset, Rect}, // Add Offset here
+    layout::{Alignment, Offset, Rect},
     style::{Color, Style, Stylize},
     widgets::{Block, BorderType, Paragraph},
-    Frame,
-    Terminal,
+    Frame, Terminal,
 };
 
 use ratzilla::{
@@ -48,33 +47,40 @@ impl App {
             .title_alignment(Alignment::Center)
             .border_type(BorderType::Rounded);
 
-        let text = format!(
+        // Static header text
+        let header_text = format!(
             r#"This is a Ratzilla template.
 Press left and right to increment and decrement the counter respectively.
 Press 'f' to trigger fire effect.
 Counter: {counter}
 
-use ratatui::style::Stylize;
-use ratatui::widgets::{{Block, Paragraph}};
+"#
+        );
 
-fn main() -> Result<(), Box<dyn std::error::Error>> {{
+        // Code snippet that will receive the fire effect
+        let code_snippet = r#"use ratatui::style::Stylize;
+use ratatui::widgets::{Block, Paragraph};
+
+fn main() -> Result<(), Box<dyn std::error::Error>> {
     let mut terminal = ratatui::init();
-    terminal.draw(|frame| {{
+    terminal.draw(|frame| {
         let block = Block::bordered().title("Welcome");
         let greeting = Paragraph::new("Hello, Ratatui! 🐭")
             .centered()
             .on_cyan()
             .block(block);
         frame.render_widget(greeting, frame.area());
-    }})?;
+    })?;
     std::thread::sleep(std::time::Duration::from_secs(5));
     ratatui::restore();
     Ok(())
-}}
-"#,
-        );
+}
+"#;
 
-        let paragraph = Paragraph::new(text)
+        // Combine texts
+        let full_text = format!("{}{}", header_text, code_snippet);
+
+        let paragraph = Paragraph::new(full_text)
             .block(block)
             .fg(Color::White)
             .bg(Color::Black)
@@ -102,7 +108,14 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {{
     }
 
     fn trigger_fire_effect(&self) {
-        let content_area = Rect::new(12, 7, 80, 17);
+        // Calculate the area where the code snippet starts
+        // Adjust these values based on your layout:
+        // - x: horizontal offset from left edge
+        // - y: vertical offset (header takes ~5 lines)
+        // - width: width of the code block
+        // - height: height of the code block
+        let code_area = Rect::new(12, 12, 80, 17);
+
         let screen_bg = Color::from_u32(0x1D2021);
         let content_bg = Color::from_u32(0x32302F);
 
@@ -114,22 +127,22 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {{
         // Phase 1: Startup - Radial pattern evolve effect (fire ignition)
         let startup = fx::evolve((EvolveSymbolSet::Shaded, style), boot_timer)
             .with_pattern(pattern::RadialPattern::with_transition((0.5, 0.5), 10.0))
-            .with_area(content_area);
+            .with_area(code_area);
 
         // Phase 2: Main Fire - Reversed evolve_from with coalesce pattern
         let inner_fire_fx = fx::evolve_from((EvolveSymbolSet::Quadrants, style), timer)
             .with_pattern(pattern::CoalescePattern::new())
-            .with_area(content_area)
+            .with_area(code_area)
             .reversed();
 
         // Translate the fire upward to simulate rising flames
         let fire =
-            fx::translate(inner_fire_fx, Offset { x: 0, y: -22 }, timer).with_area(content_area);
+            fx::translate(inner_fire_fx, Offset { x: 0, y: -22 }, timer).with_area(code_area);
 
         // Phase 3: Text Fade-In - Reveals text through the fire with coalesce pattern
         let fade_in_text = fx::fade_from(screen_bg, screen_bg, timer)
             .with_filter(CellFilter::Text)
-            .with_area(content_area)
+            .with_area(code_area)
             .with_pattern(pattern::CoalescePattern::new());
 
         // Orchestrate all phases
